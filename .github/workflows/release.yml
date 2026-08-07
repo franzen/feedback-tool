@@ -12,6 +12,8 @@ concurrency:
 jobs:
   ci:
     name: Run release checks
+    permissions:
+      contents: read
     uses: ./.github/workflows/ci.yml
 
   release:
