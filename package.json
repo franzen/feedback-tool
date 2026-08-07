@@ -1,6 +1,6 @@
 {
   "name": "@franzen/feedback-tool",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Framework-free in-browser screenshot annotation and feedback widget",
   "type": "module",
   "license": "MIT",
@@ -59,7 +59,7 @@
   },
   "dependencies": {
     "fabric": "^7.4.0",
-    "html2canvas": "^1.4.1"
+    "html2canvas-pro": "^2.3.3"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^0.7.0",

@@ -1,6 +1,66 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 
+test('captures pages that use modern CSS color functions', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => {
+    const modernColorCard = document.createElement('div');
+    modernColorCard.textContent = 'Modern color fixture';
+    modernColorCard.style.cssText = `
+      background: color-mix(in srgb, color(srgb 0.08 0.35 0.72) 82%, white);
+      border: 2px solid oklch(58% 0.2 255);
+      color: color(srgb 0.04 0.08 0.16);
+      padding: 16px;
+    `;
+    document.body.append(modernColorCard);
+  });
+
+  await page.getByRole('button', { name: 'Give feedback' }).click();
+
+  await expect(page.getByRole('dialog', { name: 'Annotate screenshot' })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('heading', { name: "We couldn't capture this page" })).toHaveCount(0);
+});
+
+test('applies message and color overrides', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(async () => {
+    const { createFeedbackTool } = await import('/src/index.js');
+    window.localizedFeedback = createFeedbackTool({
+      colors: {
+        accent: '#005ea8',
+        panel: '#f8fafc',
+        paletteRed: '#dc2626',
+      },
+      launcher: false,
+      locale: 'sv',
+      messages: {
+        editorAriaLabel: 'Annotera skärmbild',
+        brandTitle: 'Skärmfeedback',
+        next: 'Nästa',
+        reviewHeading: 'Berätta lite mer',
+        submitFeedback: 'Skicka feedback',
+        feedbackRequired: 'Beskriv vad som hände.',
+      },
+    });
+    await window.localizedFeedback.open();
+  });
+
+  await expect(page.getByRole('dialog', { name: 'Annotera skärmbild' })).toBeVisible();
+  await expect(page.getByText('Skärmfeedback')).toBeVisible();
+  const root = page.locator('[data-feedback-tool-root] .ft-root').last();
+  await expect(root).toHaveAttribute('lang', 'sv');
+  await expect.poll(() => root.evaluate((element) => ({
+    accent: element.style.getPropertyValue('--ft-accent'),
+    panel: element.style.getPropertyValue('--ft-panel'),
+  }))).toEqual({ accent: '#005ea8', panel: '#f8fafc' });
+  await expect(page.locator('[data-feedback-tool-root] [data-color="#dc2626"]')).toHaveCount(1);
+
+  await page.getByRole('button', { name: 'Nästa' }).click();
+  await expect(page.getByRole('heading', { name: 'Berätta lite mer' })).toBeVisible();
+  await page.getByRole('button', { name: 'Skicka feedback' }).click();
+  await expect(page.getByText('Beskriv vad som hände.')).toBeVisible();
+});
+
 test('captures, annotates, submits, and downloads a report', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Good morning, Nils' })).toBeVisible();

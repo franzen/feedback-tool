@@ -41,8 +41,8 @@ jsonButton.addEventListener('click', () => {
 });
 
 createFeedbackTool({
-  accentColor: '#6558d3',
   collectEmail: true,
+  colors: { accent: '#6558d3', accentHover: '#5146b7' },
   launcher: {
     enabled: true,
     label: 'Give feedback',

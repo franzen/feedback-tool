@@ -2,17 +2,17 @@ import { Point, util } from 'fabric';
 
 export const REPORT_SCHEMA_VERSION = 1;
 
-export function validateFeedback(message, email = '') {
+export function validateFeedback(message, email = '', messages = {}) {
   const errors = {};
   const normalizedMessage = message.trim();
   const normalizedEmail = email.trim();
 
   if (!normalizedMessage) {
-    errors.message = 'Please describe what happened or what should change.';
+    errors.message = messages.feedbackRequired || 'Please describe what happened or what should change.';
   }
 
   if (normalizedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-    errors.email = 'Enter a valid email address or leave this field empty.';
+    errors.email = messages.invalidEmail || 'Enter a valid email address or leave this field empty.';
   }
 
   return {

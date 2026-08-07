@@ -4,13 +4,117 @@ export interface FeedbackToolLauncherOptions {
   position?: 'bottom-left' | 'bottom-right';
 }
 
+export interface FeedbackToolMessages {
+  launcherLabel: string;
+  capturingAriaLabel: string;
+  capturingTitle: string;
+  capturingDescription: string;
+  captureErrorTitle: string;
+  captureErrorFallback: string;
+  cancel: string;
+  retry: string;
+  editorAriaLabel: string;
+  brandTitle: string;
+  brandSubtitle: string;
+  undo: string;
+  redo: string;
+  closeEditor: string;
+  annotationTools: string;
+  annotationColor: string;
+  toolSelect: string;
+  toolSelectDescription: string;
+  toolPen: string;
+  toolArrow: string;
+  toolHighlight: string;
+  toolComment: string;
+  toolRedact: string;
+  colorRed: string;
+  colorOrange: string;
+  colorYellow: string;
+  colorGreen: string;
+  colorBlue: string;
+  colorPurple: string;
+  clearAnnotations: string;
+  clear: string;
+  noAnnotations: string;
+  annotationCount: string;
+  annotationCountPlural: string;
+  next: string;
+  addComment: string;
+  commentPrompt: string;
+  commentPlaceholder: string;
+  commentRequired: string;
+  addPin: string;
+  preparing: string;
+  reviewTitle: string;
+  reviewSubtitle: string;
+  screenshotPreviewAlt: string;
+  reviewHeading: string;
+  reviewDescription: string;
+  messageLabel: string;
+  messagePlaceholder: string;
+  emailLabel: string;
+  optional: string;
+  emailPlaceholder: string;
+  attachedAutomatically: string;
+  page: string;
+  viewport: string;
+  annotations: string;
+  backToAnnotation: string;
+  submitFeedback: string;
+  feedbackRequired: string;
+  invalidEmail: string;
+  submitting: string;
+  submitError: string;
+  successTitle: string;
+  successDescription: string;
+  done: string;
+  discardConfirm: string;
+}
+
+export interface FeedbackToolColors {
+  accent: string;
+  accentHover: string;
+  onAccent: string;
+  ink: string;
+  muted: string;
+  border: string;
+  panel: string;
+  soft: string;
+  overlay: string;
+  editor: string;
+  workspace: string;
+  tool: string;
+  inputBorder: string;
+  danger: string;
+  dangerSurface: string;
+  success: string;
+  successSurface: string;
+  control: string;
+  redact: string;
+  redactPreview: string;
+  paletteRed: string;
+  paletteOrange: string;
+  paletteYellow: string;
+  paletteGreen: string;
+  paletteBlue: string;
+  palettePurple: string;
+}
+
 export interface FeedbackToolOptions {
+  /** @deprecated Use colors.accent instead. */
   accentColor?: string;
   collectEmail?: boolean;
+  colors?: Partial<FeedbackToolColors>;
   launcher?: false | FeedbackToolLauncherOptions;
+  locale?: string;
+  messages?: Partial<FeedbackToolMessages>;
   onSubmit?: (report: FeedbackReport) => void | Promise<void>;
   onError?: (error: unknown) => void;
 }
+
+export const DEFAULT_FEEDBACK_MESSAGES: Readonly<FeedbackToolMessages>;
+export const DEFAULT_FEEDBACK_COLORS: Readonly<FeedbackToolColors>;
 
 export interface FeedbackToolController {
   open(): Promise<void>;

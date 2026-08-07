@@ -1,5 +1,12 @@
 # @franzen/feedback-tool
 
+## 0.3.0
+
+### Minor Changes
+
+- Add typed partial overrides for all widget messages and semantic colors, stable English defaults, and locale metadata for accessible localized integrations.
+- Support CSS Color Level 4 values during page capture by using the modern-color-compatible html2canvas renderer.
+
 ## 0.2.0
 
 ### Minor Changes

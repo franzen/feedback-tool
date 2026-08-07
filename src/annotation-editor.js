@@ -45,14 +45,15 @@ function canvasToBlob(canvas) {
 }
 
 export class AnnotationEditor {
-  constructor({ canvasElement, capture, stage, onCommentRequest, onHistoryChange, onDirtyChange }) {
+  constructor({ canvasElement, capture, colors, initialColor, stage, onCommentRequest, onHistoryChange, onDirtyChange }) {
     this.capture = capture;
+    this.colors = colors;
     this.stage = stage;
     this.onCommentRequest = onCommentRequest;
     this.onHistoryChange = onHistoryChange;
     this.onDirtyChange = onDirtyChange;
     this.tool = 'arrow';
-    this.color = '#e23d54';
+    this.color = initialColor;
     this.drawing = null;
     this.restoring = false;
     this.commentSequence = 0;
@@ -103,10 +104,10 @@ export class AnnotationEditor {
         path.set({
           annotationId: id(),
           annotationType: 'pen',
-          borderColor: '#6558d3',
-          cornerColor: '#ffffff',
+          borderColor: this.colors.control,
+          cornerColor: this.colors.onAccent,
           cornerSize: Math.max(10, 10 * this.pixelScale),
-          cornerStrokeColor: '#6558d3',
+          cornerStrokeColor: this.colors.control,
           cornerStyle: 'circle',
           evented: false,
           lockRotation: true,
@@ -207,8 +208,8 @@ export class AnnotationEditor {
       top: start.y,
       width: 1,
       height: 1,
-      fill: tool === 'highlight' ? 'transparent' : 'rgba(30,41,59,.42)',
-      stroke: tool === 'highlight' ? this.color : '#475467',
+      fill: tool === 'highlight' ? 'transparent' : this.colors.redactPreview,
+      stroke: tool === 'highlight' ? this.color : this.colors.tool,
       strokeDashArray: tool === 'redact' ? [8 * this.pixelScale, 6 * this.pixelScale] : undefined,
       strokeWidth: tool === 'highlight' ? Math.max(3, 3 * this.pixelScale) : Math.max(2, 2 * this.pixelScale),
       selectable: false,
@@ -256,10 +257,10 @@ export class AnnotationEditor {
       annotationColor: this.color,
       annotationId: id(),
       annotationType: 'highlight',
-      borderColor: '#6558d3',
-      cornerColor: '#ffffff',
+      borderColor: this.colors.control,
+      cornerColor: this.colors.onAccent,
       cornerSize: Math.max(10, 10 * this.pixelScale),
-      cornerStrokeColor: '#6558d3',
+      cornerStrokeColor: this.colors.control,
       cornerStyle: 'circle',
       evented: false,
       fill: 'transparent',
@@ -312,13 +313,13 @@ export class AnnotationEditor {
     const circle = new Circle({
       radius,
       fill: this.color,
-      stroke: '#ffffff',
+      stroke: this.colors.onAccent,
       strokeWidth: Math.max(2, 2 * this.pixelScale),
       originX: 'center',
       originY: 'center',
     });
     const label = new FabricText(String(number), {
-      fill: '#ffffff',
+      fill: this.colors.onAccent,
       fontFamily: 'Arial, sans-serif',
       fontSize: 14 * this.pixelScale,
       fontWeight: 'bold',
@@ -351,16 +352,16 @@ export class AnnotationEditor {
       top: bounds.top,
       annotationId: id(),
       annotationType: 'redact',
-      borderColor: '#6558d3',
-      cornerColor: '#ffffff',
+      borderColor: this.colors.control,
+      cornerColor: this.colors.onAccent,
       cornerSize: Math.max(10, 10 * this.pixelScale),
-      cornerStrokeColor: '#6558d3',
+      cornerStrokeColor: this.colors.control,
       cornerStyle: 'circle',
       evented: false,
       lockRotation: true,
       lockScalingFlip: true,
       selectable: false,
-      stroke: '#344054',
+      stroke: this.colors.redact,
       strokeUniform: true,
       strokeWidth: Math.max(1, this.pixelScale),
       transparentCorners: false,
