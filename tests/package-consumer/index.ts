@@ -1,5 +1,7 @@
 import {
   createFeedbackTool,
+  DEFAULT_FEEDBACK_COLORS,
+  DEFAULT_FEEDBACK_MESSAGES,
   reportToJson,
   type FeedbackAnnotation,
   type FeedbackReport,
@@ -11,10 +13,19 @@ import {
 } from '@franzen/feedback-tool/server';
 
 const controller = createFeedbackTool({
+  colors: {
+    accent: DEFAULT_FEEDBACK_COLORS.accent,
+    panel: '#ffffff',
+  },
   launcher: {
     enabled: true,
     label: 'Give feedback',
     position: 'bottom-right',
+  },
+  locale: 'sv',
+  messages: {
+    launcherLabel: DEFAULT_FEEDBACK_MESSAGES.launcherLabel,
+    next: 'Nästa',
   },
   onSubmit: async (report) => {
     const json: string = reportToJson(report);

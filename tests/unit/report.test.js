@@ -26,6 +26,17 @@ describe('validateFeedback', () => {
     expect(result.valid).toBe(false);
     expect(result.errors.email).toMatch(/valid email/i);
   });
+
+  it('uses supplied validation messages', () => {
+    const result = validateFeedback('', 'invalid', {
+      feedbackRequired: 'Beskriv vad som hände.',
+      invalidEmail: 'Ange en giltig e-postadress.',
+    });
+    expect(result.errors).toEqual({
+      message: 'Beskriv vad som hände.',
+      email: 'Ange en giltig e-postadress.',
+    });
+  });
 });
 
 describe('capture and report metadata', () => {

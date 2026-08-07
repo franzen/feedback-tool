@@ -59,12 +59,20 @@ The ESM library output is written to `dist/`, and the static demo is written to 
 import { createFeedbackTool, reportToJson } from '@franzen/feedback-tool';
 
 const feedback = createFeedbackTool({
-  accentColor: '#6558d3',
   collectEmail: true,
+  colors: {
+    accent: '#6558d3',
+    accentHover: '#5146b7',
+  },
   launcher: {
     enabled: true,
-    label: 'Give feedback',
     position: 'bottom-right',
+  },
+  locale: 'sv',
+  messages: {
+    launcherLabel: 'Ge feedback',
+    next: 'Nästa',
+    submitFeedback: 'Skicka feedback',
   },
   onSubmit: async (report) => {
     // report.image is a flattened PNG Blob.
@@ -84,7 +92,13 @@ feedback.destroy();
 
 Set `launcher: false` when the host page supplies its own button. The controller returned by `createFeedbackTool()` exposes `open()`, `close()`, and `destroy()`.
 
-The widget entry point is browser-only and ESM-only. The `/server` entry point requires Node.js and is isolated from browser bundles. `fabric` and `html2canvas` remain normal package dependencies so host bundlers can deduplicate and optimize them. TypeScript declarations are included.
+### Localization and colors
+
+The widget has stable English defaults. Pass a partial `messages` object to override only the copy your application needs; omitted keys keep their defaults. Dynamic values use named placeholders, for example `annotationCountPlural: '{count} markeringar'`. Set `locale` so assistive technologies use the correct language.
+
+Pass a partial `colors` object to override semantic design tokens such as `accent`, `accentHover`, `panel`, `ink`, `danger`, `success`, and the six `palette*` annotation colors. The exported `DEFAULT_FEEDBACK_MESSAGES` and `DEFAULT_FEEDBACK_COLORS` objects make it straightforward to inspect or extend the complete defaults. The legacy `accentColor` option remains supported as an alias for `colors.accent`.
+
+The widget entry point is browser-only and ESM-only. The `/server` entry point requires Node.js and is isolated from browser bundles. `fabric` and `html2canvas-pro` remain normal package dependencies so host bundlers can deduplicate and optimize them. TypeScript declarations are included.
 
 ## Forward feedback to support issues
 
@@ -153,9 +167,9 @@ For a GitHub App, grant **Issues: Read and write**, install it only on the targe
 
 ## Capture behavior and limitations
 
-The internal `captureViewport()` adapter currently uses `html2canvas` and captures only the visible viewport. Widget UI is excluded, animations are paused, resources receive a short loading window, and output is validated before the editor opens.
+The internal `captureViewport()` adapter currently uses `html2canvas-pro` and captures only the visible viewport. Widget UI is excluded, animations are paused, resources receive a short loading window, and output is validated before the editor opens. The renderer supports modern CSS Color Level 4 values such as `color()`, `color-mix()`, and `oklch()`.
 
-Because `html2canvas` reconstructs a page from its DOM rather than taking a native browser screenshot, some advanced CSS, cross-origin images without CORS headers, tainted canvases, and cross-origin iframe content may not render perfectly. The capture adapter is intentionally isolated so a different renderer can be evaluated later without changing the editor or public API.
+Because the renderer reconstructs a page from its DOM rather than taking a native browser screenshot, some advanced CSS, cross-origin images without CORS headers, tainted canvases, and cross-origin iframe content may not render perfectly. The capture adapter is intentionally isolated so a different renderer can be evaluated later without changing the editor or public API.
 
 ## Verification
 

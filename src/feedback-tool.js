@@ -1,59 +1,52 @@
 import { AnnotationEditor } from './annotation-editor.js';
 import { captureViewport } from './capture.js';
+import { formatMessage, normalizeOptions } from './options.js';
 import { buildMetadata, createReport, validateFeedback } from './report.js';
 import { WIDGET_STYLES } from './styles.js';
 
 const TOOLS = [
-  ['select', '↖', 'Edit', 'Select an annotation to move, resize, or delete it'],
-  ['pen', '⌁', 'Pen'],
-  ['arrow', '↗', 'Arrow'],
-  ['highlight', '▭', 'Highlight'],
-  ['comment', '●', 'Comment'],
-  ['redact', '▦', 'Hide'],
+  ['select', '↖', 'toolSelect', 'toolSelectDescription'],
+  ['pen', '⌁', 'toolPen'],
+  ['arrow', '↗', 'toolArrow'],
+  ['highlight', '▭', 'toolHighlight'],
+  ['comment', '●', 'toolComment'],
+  ['redact', '▦', 'toolRedact'],
 ];
 
 const COLORS = [
-  ['#e23d54', 'Red'],
-  ['#f97316', 'Orange'],
-  ['#eab308', 'Yellow'],
-  ['#16a34a', 'Green'],
-  ['#2563eb', 'Blue'],
-  ['#6558d3', 'Purple'],
+  ['paletteRed', 'colorRed'],
+  ['paletteOrange', 'colorOrange'],
+  ['paletteYellow', 'colorYellow'],
+  ['paletteGreen', 'colorGreen'],
+  ['paletteBlue', 'colorBlue'],
+  ['palettePurple', 'colorPurple'],
 ];
 
-function normalizeOptions(options = {}) {
-  const launcher = options.launcher === false ? { enabled: false } : {
-    enabled: options.launcher?.enabled ?? true,
-    label: options.launcher?.label || 'Give feedback',
-    position: options.launcher?.position === 'bottom-left' ? 'bottom-left' : 'bottom-right',
-  };
-
-  return {
-    accentColor: options.accentColor || '#6558d3',
-    collectEmail: options.collectEmail ?? true,
-    launcher,
-    onError: typeof options.onError === 'function' ? options.onError : () => {},
-    onSubmit: typeof options.onSubmit === 'function' ? options.onSubmit : async () => {},
-  };
-}
-
-function toolMarkup() {
+function toolMarkup(messages, escape) {
   return TOOLS.map(
-    ([name, symbol, label, description]) => `
-      <button class="ft-tool" type="button" data-tool="${name}" aria-label="${description || label}" title="${description || label}" aria-pressed="${name === 'arrow'}">
+    ([name, symbol, labelKey, descriptionKey]) => {
+      const label = escape(messages[labelKey]);
+      const description = escape(messages[descriptionKey] || messages[labelKey]);
+      return `
+      <button class="ft-tool" type="button" data-tool="${name}" aria-label="${description}" title="${description}" aria-pressed="${name === 'arrow'}">
         <span class="ft-tool-symbol" aria-hidden="true">${symbol}</span>
         <span>${label}</span>
       </button>
-    `,
+    `;
+    },
   ).join('');
 }
 
-function colorMarkup() {
+function colorMarkup(messages, colors, escape) {
   return `
-    <div class="ft-palette" role="group" aria-label="Annotation color">
-      ${COLORS.map(([color, label], index) => `
+    <div class="ft-palette" role="group" aria-label="${escape(messages.annotationColor)}">
+      ${COLORS.map(([colorKey, labelKey], index) => {
+        const color = escape(colors[colorKey]);
+        const label = escape(messages[labelKey]);
+        return `
         <button class="ft-color" type="button" data-color="${color}" aria-label="${label}" title="${label}" aria-pressed="${index === 0}" style="--ft-color:${color}"></button>
-      `).join('')}
+      `;
+      }).join('')}
     </div>
   `;
 }
@@ -82,7 +75,10 @@ export class FeedbackToolController {
     this.shadow = this.host.attachShadow({ mode: 'open' });
     this.shadow.innerHTML = `<style>${WIDGET_STYLES}</style><div class="ft-root"></div>`;
     this.root = this.shadow.querySelector('.ft-root');
-    this.root.style.setProperty('--ft-accent', this.options.accentColor);
+    if (this.options.locale) this.root.lang = this.options.locale;
+    Object.entries(this.options.colors).forEach(([name, value]) => {
+      this.root.style.setProperty(`--ft-${name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`, value);
+    });
     document.body.append(this.host);
     this.renderLauncher();
   }
@@ -95,7 +91,7 @@ export class FeedbackToolController {
 
     const sideStyle = this.options.launcher.position === 'bottom-left' ? 'left:22px;right:auto' : '';
     this.root.innerHTML = `
-      <button class="ft-launcher" type="button" style="${sideStyle}" aria-label="${this.options.launcher.label}">
+      <button class="ft-launcher" type="button" style="${sideStyle}" aria-label="${this.escape(this.options.launcher.label)}">
         <span class="ft-launcher-mark" aria-hidden="true">✦</span>
         <span>${this.escape(this.options.launcher.label)}</span>
       </button>
@@ -128,26 +124,28 @@ export class FeedbackToolController {
   }
 
   renderCapturing() {
+    const { messages } = this.options;
     this.root.innerHTML = `
-      <div class="ft-overlay ft-capturing" role="dialog" aria-modal="true" aria-label="Capturing the visible page">
+      <div class="ft-overlay ft-capturing" role="dialog" aria-modal="true" aria-label="${this.escape(messages.capturingAriaLabel)}">
         <div class="ft-capturing-card">
           <div class="ft-spinner" aria-hidden="true"></div>
-          <h2 class="ft-card-title">Preparing your screenshot</h2>
-          <p class="ft-card-copy">This usually takes just a moment.</p>
+          <h2 class="ft-card-title">${this.escape(messages.capturingTitle)}</h2>
+          <p class="ft-card-copy">${this.escape(messages.capturingDescription)}</p>
         </div>
       </div>
     `;
   }
 
   renderCaptureError(error) {
+    const { messages } = this.options;
     this.root.innerHTML = `
       <div class="ft-overlay ft-capturing" role="alertdialog" aria-modal="true" aria-labelledby="ft-error-title">
         <div class="ft-error-card">
-          <h2 class="ft-card-title" id="ft-error-title">We couldn't capture this page</h2>
-          <p class="ft-card-copy">${this.escape(error?.message || 'Please try the capture again.')}</p>
+          <h2 class="ft-card-title" id="ft-error-title">${this.escape(messages.captureErrorTitle)}</h2>
+          <p class="ft-card-copy">${this.escape(error?.message || messages.captureErrorFallback)}</p>
           <div class="ft-error-actions">
-            <button class="ft-button" type="button" data-action="cancel-capture">Cancel</button>
-            <button class="ft-button ft-button-primary" type="button" data-action="retry-capture">Retry</button>
+            <button class="ft-button" type="button" data-action="cancel-capture">${this.escape(messages.cancel)}</button>
+            <button class="ft-button ft-button-primary" type="button" data-action="retry-capture">${this.escape(messages.retry)}</button>
           </div>
         </div>
       </div>
@@ -161,24 +159,25 @@ export class FeedbackToolController {
   }
 
   renderEditor() {
+    const { colors, messages } = this.options;
     this.root.innerHTML = `
-      <div class="ft-overlay ft-editor" role="dialog" aria-modal="true" aria-label="Annotate screenshot">
+      <div class="ft-overlay ft-editor" role="dialog" aria-modal="true" aria-label="${this.escape(messages.editorAriaLabel)}">
         <header class="ft-header" data-edit-view>
           <div class="ft-brand">
             <div class="ft-brand-mark" aria-hidden="true">✦</div>
             <div class="ft-brand-copy">
-              <span class="ft-brand-title">Screen feedback</span>
-              <span class="ft-brand-subtitle">Show exactly what needs attention</span>
+              <span class="ft-brand-title">${this.escape(messages.brandTitle)}</span>
+              <span class="ft-brand-subtitle">${this.escape(messages.brandSubtitle)}</span>
             </div>
           </div>
           <div class="ft-header-actions">
-            <button class="ft-icon-button" type="button" data-action="undo" aria-label="Undo" title="Undo" disabled>↶</button>
-            <button class="ft-icon-button" type="button" data-action="redo" aria-label="Redo" title="Redo" disabled>↷</button>
-            <button class="ft-icon-button" type="button" data-action="close" aria-label="Close editor" title="Close">×</button>
+            <button class="ft-icon-button" type="button" data-action="undo" aria-label="${this.escape(messages.undo)}" title="${this.escape(messages.undo)}" disabled>↶</button>
+            <button class="ft-icon-button" type="button" data-action="redo" aria-label="${this.escape(messages.redo)}" title="${this.escape(messages.redo)}" disabled>↷</button>
+            <button class="ft-icon-button" type="button" data-action="close" aria-label="${this.escape(messages.closeEditor)}" title="${this.escape(messages.closeEditor)}">×</button>
           </div>
         </header>
         <div class="ft-workspace" data-edit-view>
-          <nav class="ft-toolrail" aria-label="Annotation tools">${toolMarkup()}${colorMarkup()}</nav>
+          <nav class="ft-toolrail" aria-label="${this.escape(messages.annotationTools)}">${toolMarkup(messages, (value) => this.escape(value))}${colorMarkup(messages, colors, (value) => this.escape(value))}</nav>
           <div class="ft-stage-shell">
             <div class="ft-stage"><canvas data-canvas></canvas></div>
           </div>
@@ -186,11 +185,11 @@ export class FeedbackToolController {
         <footer class="ft-footer" data-edit-view>
           <div class="ft-footer-actions">
             <button class="ft-button ft-button-danger" type="button" data-action="clear">
-              <span class="ft-clear-label">Clear annotations</span><span class="ft-hidden" aria-hidden="true">Clear</span>
+              <span class="ft-clear-label">${this.escape(messages.clearAnnotations)}</span><span class="ft-hidden" aria-hidden="true">${this.escape(messages.clear)}</span>
             </button>
-            <span class="ft-status" data-status>No annotations yet</span>
+            <span class="ft-status" data-status>${this.escape(messages.noAnnotations)}</span>
           </div>
-          <button class="ft-button ft-button-primary" type="button" data-action="next">Next</button>
+          <button class="ft-button ft-button-primary" type="button" data-action="next">${this.escape(messages.next)}</button>
         </footer>
       </div>
     `;
@@ -199,6 +198,8 @@ export class FeedbackToolController {
     this.editor = new AnnotationEditor({
       canvasElement: this.root.querySelector('[data-canvas]'),
       capture: this.capture,
+      colors,
+      initialColor: colors.paletteRed,
       stage,
       onCommentRequest: (request) => this.showCommentPopover(request),
       onDirtyChange: (dirty) => { this.dirty = dirty; },
@@ -240,7 +241,9 @@ export class FeedbackToolController {
     const status = this.root.querySelector('[data-status]');
     if (undo) undo.disabled = !canUndo;
     if (redo) redo.disabled = !canRedo;
-    if (status) status.textContent = count ? `${count} annotation${count === 1 ? '' : 's'}` : 'No annotations yet';
+    if (status) status.textContent = count
+      ? formatMessage(count === 1 ? this.options.messages.annotationCount : this.options.messages.annotationCountPlural, { count })
+      : this.options.messages.noAnnotations;
   }
 
   showCommentPopover(request) {
@@ -248,18 +251,19 @@ export class FeedbackToolController {
     const popover = document.createElement('div');
     popover.className = 'ft-popover';
     popover.setAttribute('role', 'dialog');
-    popover.setAttribute('aria-label', 'Add comment');
+    const { messages } = this.options;
+    popover.setAttribute('aria-label', messages.addComment);
     const left = Math.min(Math.max(12, request.clientX + 12), window.innerWidth - 332);
     const top = Math.min(Math.max(12, request.clientY + 12), window.innerHeight - 210);
     popover.style.left = `${left}px`;
     popover.style.top = `${top}px`;
     popover.innerHTML = `
-      <label class="ft-popover-label" for="ft-pin-comment">What should we know?</label>
-      <textarea class="ft-textarea" id="ft-pin-comment" placeholder="Add a short comment…"></textarea>
+      <label class="ft-popover-label" for="ft-pin-comment">${this.escape(messages.commentPrompt)}</label>
+      <textarea class="ft-textarea" id="ft-pin-comment" placeholder="${this.escape(messages.commentPlaceholder)}"></textarea>
       <p class="ft-field-error" data-comment-error></p>
       <div class="ft-popover-actions">
-        <button class="ft-button" type="button" data-action="cancel-comment">Cancel</button>
-        <button class="ft-button ft-button-primary" type="button" data-action="save-comment">Add pin</button>
+        <button class="ft-button" type="button" data-action="cancel-comment">${this.escape(messages.cancel)}</button>
+        <button class="ft-button ft-button-primary" type="button" data-action="save-comment">${this.escape(messages.addPin)}</button>
       </div>
     `;
     this.root.append(popover);
@@ -268,7 +272,7 @@ export class FeedbackToolController {
     const save = () => {
       const text = textarea.value.trim();
       if (!text) {
-        popover.querySelector('[data-comment-error]').textContent = 'Enter a comment for this pin.';
+        popover.querySelector('[data-comment-error]').textContent = messages.commentRequired;
         textarea.focus();
         return;
       }
@@ -295,7 +299,7 @@ export class FeedbackToolController {
   async showReview() {
     const nextButton = this.root.querySelector('[data-action="next"]');
     nextButton.disabled = true;
-    nextButton.textContent = 'Preparing…';
+    nextButton.textContent = this.options.messages.preparing;
     try {
       this.reviewBlob = await this.editor.exportBlob();
       if (this.reviewUrl) URL.revokeObjectURL(this.reviewUrl);
@@ -306,11 +310,12 @@ export class FeedbackToolController {
     } catch (error) {
       this.options.onError(error);
       nextButton.disabled = false;
-      nextButton.textContent = 'Next';
+      nextButton.textContent = this.options.messages.next;
     }
   }
 
   renderReview() {
+    const { messages } = this.options;
     const shell = document.createElement('section');
     shell.className = 'ft-review-shell';
     shell.setAttribute('data-review-shell', '');
@@ -318,39 +323,39 @@ export class FeedbackToolController {
       <header class="ft-header">
         <div class="ft-brand">
           <div class="ft-brand-mark" aria-hidden="true">✦</div>
-          <div class="ft-brand-copy"><span class="ft-brand-title">Review feedback</span><span class="ft-brand-subtitle">One last step before sending</span></div>
+          <div class="ft-brand-copy"><span class="ft-brand-title">${this.escape(messages.reviewTitle)}</span><span class="ft-brand-subtitle">${this.escape(messages.reviewSubtitle)}</span></div>
         </div>
-        <button class="ft-icon-button" type="button" data-action="close-review" aria-label="Close editor">×</button>
+        <button class="ft-icon-button" type="button" data-action="close-review" aria-label="${this.escape(messages.closeEditor)}">×</button>
       </header>
       <div class="ft-review-view">
-        <div class="ft-review-preview"><img src="${this.reviewUrl}" alt="Annotated screenshot preview"></div>
+        <div class="ft-review-preview"><img src="${this.reviewUrl}" alt="${this.escape(messages.screenshotPreviewAlt)}"></div>
         <form class="ft-review-form" novalidate>
-          <h2>Tell us a little more</h2>
-          <p class="ft-review-intro">Your screenshot and browser details will be attached automatically.</p>
+          <h2>${this.escape(messages.reviewHeading)}</h2>
+          <p class="ft-review-intro">${this.escape(messages.reviewDescription)}</p>
           <div class="ft-field">
-            <label for="ft-message">What happened?</label>
-            <textarea class="ft-textarea" id="ft-message" name="message" placeholder="Describe the problem or suggestion…" required></textarea>
+            <label for="ft-message">${this.escape(messages.messageLabel)}</label>
+            <textarea class="ft-textarea" id="ft-message" name="message" placeholder="${this.escape(messages.messagePlaceholder)}" required></textarea>
             <p class="ft-field-error" data-error="message"></p>
           </div>
           ${this.options.collectEmail ? `
             <div class="ft-field">
-              <label for="ft-email">Email <span class="ft-optional">Optional</span></label>
-              <input class="ft-input" id="ft-email" name="email" type="email" autocomplete="email" placeholder="you@example.com">
+              <label for="ft-email">${this.escape(messages.emailLabel)} <span class="ft-optional">${this.escape(messages.optional)}</span></label>
+              <input class="ft-input" id="ft-email" name="email" type="email" autocomplete="email" placeholder="${this.escape(messages.emailPlaceholder)}">
               <p class="ft-field-error" data-error="email"></p>
             </div>
           ` : ''}
           <div class="ft-meta-card">
-            <p class="ft-meta-title">Attached automatically</p>
-            <div class="ft-meta-row"><span>Page</span><span title="${this.escape(this.metadata.url)}">${this.escape(this.metadata.title || this.metadata.url)}</span></div>
-            <div class="ft-meta-row"><span>Viewport</span><span>${this.metadata.viewport.width} × ${this.metadata.viewport.height}</span></div>
-            <div class="ft-meta-row"><span>Annotations</span><span>${this.editor.getAnnotations().length}</span></div>
+            <p class="ft-meta-title">${this.escape(messages.attachedAutomatically)}</p>
+            <div class="ft-meta-row"><span>${this.escape(messages.page)}</span><span title="${this.escape(this.metadata.url)}">${this.escape(this.metadata.title || this.metadata.url)}</span></div>
+            <div class="ft-meta-row"><span>${this.escape(messages.viewport)}</span><span>${this.metadata.viewport.width} × ${this.metadata.viewport.height}</span></div>
+            <div class="ft-meta-row"><span>${this.escape(messages.annotations)}</span><span>${this.editor.getAnnotations().length}</span></div>
           </div>
           <p class="ft-submit-error ft-hidden" data-submit-error role="alert"></p>
         </form>
       </div>
       <footer class="ft-footer">
-        <button class="ft-button" type="button" data-action="back">Back to annotation</button>
-        <button class="ft-button ft-button-primary" type="button" data-action="submit">Submit feedback</button>
+        <button class="ft-button" type="button" data-action="back">${this.escape(messages.backToAnnotation)}</button>
+        <button class="ft-button ft-button-primary" type="button" data-action="submit">${this.escape(messages.submitFeedback)}</button>
       </footer>
     `;
     this.root.querySelector('.ft-editor').append(shell);
@@ -366,7 +371,7 @@ export class FeedbackToolController {
     this.root.querySelectorAll('[data-edit-view]').forEach((element) => element.classList.remove('ft-hidden'));
     const nextButton = this.root.querySelector('[data-action="next"]');
     nextButton.disabled = false;
-    nextButton.textContent = 'Next';
+    nextButton.textContent = this.options.messages.next;
     this.state = 'editing';
     this.editor.resizeToFit();
     this.root.querySelector('[data-tool][aria-pressed="true"]')?.focus();
@@ -378,6 +383,10 @@ export class FeedbackToolController {
     const validation = validateFeedback(
       form.elements.message.value,
       this.options.collectEmail ? form.elements.email.value : '',
+      {
+        feedbackRequired: this.options.messages.feedbackRequired,
+        invalidEmail: this.options.messages.invalidEmail,
+      },
     );
     shell.querySelector('[data-error="message"]').textContent = validation.errors.message || '';
     const emailError = shell.querySelector('[data-error="email"]');
@@ -390,7 +399,7 @@ export class FeedbackToolController {
     const button = shell.querySelector('[data-action="submit"]');
     const errorBox = shell.querySelector('[data-submit-error]');
     button.disabled = true;
-    button.textContent = 'Submitting…';
+    button.textContent = this.options.messages.submitting;
     errorBox.classList.add('ft-hidden');
 
     const report = createReport({
@@ -407,23 +416,24 @@ export class FeedbackToolController {
       this.renderSuccess(shell);
     } catch (error) {
       this.options.onError(error);
-      errorBox.textContent = error?.message || 'The feedback could not be submitted. Please try again.';
+      errorBox.textContent = error?.message || this.options.messages.submitError;
       errorBox.classList.remove('ft-hidden');
       button.disabled = false;
-      button.textContent = 'Submit feedback';
+      button.textContent = this.options.messages.submitFeedback;
     }
   }
 
   renderSuccess(reviewShell) {
+    const { messages } = this.options;
     reviewShell.remove();
     const success = document.createElement('section');
     success.className = 'ft-success-view';
     success.innerHTML = `
       <div class="ft-success-card" role="status">
         <div class="ft-success-mark" aria-hidden="true">✓</div>
-        <h2>Feedback captured</h2>
-        <p>Thanks—your annotated report is ready.</p>
-        <button class="ft-button ft-button-primary" type="button" data-action="done">Done</button>
+        <h2>${this.escape(messages.successTitle)}</h2>
+        <p>${this.escape(messages.successDescription)}</p>
+        <button class="ft-button ft-button-primary" type="button" data-action="done">${this.escape(messages.done)}</button>
       </div>
     `;
     this.root.querySelector('.ft-editor').append(success);
@@ -474,7 +484,7 @@ export class FeedbackToolController {
   }
 
   close({ force = false } = {}) {
-    if (!force && (this.dirty || this.formDirty) && !window.confirm('Discard this feedback and its annotations?')) return false;
+    if (!force && (this.dirty || this.formDirty) && !window.confirm(this.options.messages.discardConfirm)) return false;
     this.reset();
     return true;
   }
