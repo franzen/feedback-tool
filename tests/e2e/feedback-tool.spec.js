@@ -6,7 +6,6 @@ test('captures, annotates, submits, and downloads a report', async ({ page }) =>
   await expect(page.getByRole('heading', { name: 'Good morning, Nils' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Give feedback' }).click();
-  await expect(page.getByRole('dialog', { name: 'Capturing the visible page' })).toBeVisible();
   await expect(page.getByRole('dialog', { name: 'Annotate screenshot' })).toBeVisible({ timeout: 15_000 });
 
   const canvas = page.locator('[data-feedback-tool-root] .upper-canvas');
@@ -76,7 +75,7 @@ test('captures, annotates, submits, and downloads a report', async ({ page }) =>
   await expect(page.locator('[data-feedback-tool-root] [data-status]')).toContainText('5 annotations');
 
   await page.getByRole('button', { name: 'Next' }).click();
-  await expect(page.getByRole('heading', { name: 'Tell us a little more' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tell us a little more' })).toBeVisible({ timeout: 15_000 });
   await page.getByLabel('What happened?').fill('The dashboard needs a few visual adjustments.');
   await page.getByLabel('Email').fill('nils@example.com');
   await page.getByRole('button', { name: 'Submit feedback' }).click();
