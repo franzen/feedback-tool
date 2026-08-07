@@ -5,14 +5,17 @@ export default defineConfig({
   build: {
     emptyOutDir: true,
     lib: {
-      entry: resolve(import.meta.dirname, 'src/index.js'),
+      entry: {
+        index: resolve(import.meta.dirname, 'src/index.js'),
+        server: resolve(import.meta.dirname, 'src/server/index.js'),
+      },
       name: 'FeedbackTool',
       formats: ['es'],
-      fileName: () => 'index.js',
+      fileName: (_format, entryName) => `${entryName}.js`,
     },
     license: true,
     rollupOptions: {
-      external: ['fabric', 'html2canvas'],
+      external: ['fabric', 'html2canvas', /^node:/],
       output: {
         exports: 'named',
       },

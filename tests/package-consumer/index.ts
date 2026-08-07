@@ -4,6 +4,11 @@ import {
   type FeedbackAnnotation,
   type FeedbackReport,
 } from '@franzen/feedback-tool';
+import {
+  createGithubIssueProvider,
+  createSupportIssueClient,
+  type SupportIssue,
+} from '@franzen/feedback-tool/server';
 
 const controller = createFeedbackTool({
   launcher: {
@@ -32,3 +37,22 @@ void openResult;
 void closeResult;
 void image;
 void schemaVersion;
+
+const github = createGithubIssueProvider({
+  repository: 'franzen/feedback-tool',
+  auth: {
+    type: 'app',
+    appId: '123',
+    installationId: '456',
+    privateKey: 'server-secret',
+  },
+});
+const supportIssues = createSupportIssueClient({ provider: github });
+const forwarded: Promise<SupportIssue> = supportIssues.forwardFeedback(report, {
+  title: 'Feedback from the settings page',
+  screenshotUrl: 'https://app.example.com/screenshots/report.png',
+  labels: ['in-app-feedback'],
+});
+const listed: Promise<SupportIssue[]> = supportIssues.listIssues({ status: 'all' });
+void forwarded;
+void listed;

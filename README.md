@@ -84,7 +84,60 @@ feedback.destroy();
 
 Set `launcher: false` when the host page supplies its own button. The controller returned by `createFeedbackTool()` exposes `open()`, `close()`, and `destroy()`.
 
-The package is browser-only and ESM-only. `fabric` and `html2canvas` remain normal package dependencies so host bundlers can deduplicate and optimize them. TypeScript declarations are included.
+The widget entry point is browser-only and ESM-only. The `/server` entry point requires Node.js and is isolated from browser bundles. `fabric` and `html2canvas` remain normal package dependencies so host bundlers can deduplicate and optimize them. TypeScript declarations are included.
+
+## Forward feedback to support issues
+
+Backend integrations are available from the separate `@franzen/feedback-tool/server` entry point. Keep this code on the server: GitHub credentials must never be imported into or sent to the browser.
+
+The provider-neutral client exposes the same issue, status, and comment API regardless of which ticket system is used. GitHub is the first provider:
+
+```js
+import {
+  createGithubIssueProvider,
+  createSupportIssueClient,
+} from '@franzen/feedback-tool/server';
+
+const supportIssues = createSupportIssueClient({
+  provider: createGithubIssueProvider({
+    repository: 'your-org/support',
+    auth: {
+      type: 'app',
+      clientId: process.env.GITHUB_APP_CLIENT_ID,
+      installationId: process.env.GITHUB_APP_INSTALLATION_ID,
+      privateKey: process.env.GITHUB_APP_PRIVATE_KEY,
+    },
+  }),
+});
+```
+
+Store the annotated `report.image` in storage controlled by your backend, then forward the report with a URL GitHub is allowed to render:
+
+```js
+const issue = await supportIssues.forwardFeedback(report, {
+  title: 'Feedback from the billing page', // Optional; defaults to the first message line.
+  screenshotUrl: 'https://app.example.com/api/feedback/screenshots/report-id.png',
+  labels: ['in-app-feedback', 'bug'],
+  context: {
+    Application: 'Customer portal',
+    Version: '2.4.0',
+  },
+});
+
+// Persist issue.id alongside the local feedback record.
+const latest = await supportIssues.getIssue(issue.id);
+console.log(latest.status, latest.statusReason, latest.updatedAt);
+
+const allIssues = await supportIssues.listIssues({ status: 'all', labels: ['in-app-feedback'] });
+const comments = await supportIssues.listComments(issue.id);
+await supportIssues.addComment(issue.id, 'Thanks — we can reproduce this.');
+```
+
+`forwardFeedback()` produces a Markdown issue body containing the message, screenshot link, and technical report metadata. Reporter email is excluded by default; opt in with `includeReporterEmail: true` only when your privacy policy allows it. Use `createIssue()` directly when an application needs complete control over title and body formatting.
+
+The screenshot is not uploaded to GitHub by this package because the GitHub Issues API has no issue-attachment upload endpoint. Protect the screenshot URL according to the application's data policy, and remember that GitHub must be able to fetch it if it is embedded in the issue.
+
+For a GitHub App, grant **Issues: Read and write**, install it only on the target repository, and provide the App client ID (or legacy App ID), installation ID, and PEM private key. Installation tokens are generated and cached automatically. A fine-grained token can also be used with `auth: { type: 'token', token }`; it likewise needs repository Issues read/write access.
 
 ## Report payload
 

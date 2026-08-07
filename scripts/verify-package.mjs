@@ -16,8 +16,10 @@ const requiredPaths = [
   'LICENSE',
   'README.md',
   'dist/index.js',
+  'dist/server.js',
   'package.json',
   'types/index.d.ts',
+  'types/server.d.ts',
 ];
 
 for (const path of requiredPaths) {

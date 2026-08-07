@@ -1,5 +1,11 @@
 # @franzen/feedback-tool
 
+## 0.2.0
+
+### Minor Changes
+
+- Add a server-only support issue abstraction with a GitHub provider for forwarding feedback, fetching issue status, listing issues and comments, and posting replies.
+
 ## 0.1.0
 
 ### Minor Changes
