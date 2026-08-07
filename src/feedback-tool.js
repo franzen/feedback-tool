@@ -12,6 +12,15 @@ const TOOLS = [
   ['redact', '▦', 'Hide'],
 ];
 
+const COLORS = [
+  ['#e23d54', 'Red'],
+  ['#f97316', 'Orange'],
+  ['#eab308', 'Yellow'],
+  ['#16a34a', 'Green'],
+  ['#2563eb', 'Blue'],
+  ['#6558d3', 'Purple'],
+];
+
 function normalizeOptions(options = {}) {
   const launcher = options.launcher === false ? { enabled: false } : {
     enabled: options.launcher?.enabled ?? true,
@@ -31,12 +40,29 @@ function normalizeOptions(options = {}) {
 function toolMarkup() {
   return TOOLS.map(
     ([name, symbol, label, description]) => `
-      <button class="ft-tool" type="button" data-tool="${name}" aria-label="${description || label}" title="${description || label}" aria-pressed="${name === 'select'}">
+      <button class="ft-tool" type="button" data-tool="${name}" aria-label="${description || label}" title="${description || label}" aria-pressed="${name === 'arrow'}">
         <span class="ft-tool-symbol" aria-hidden="true">${symbol}</span>
         <span>${label}</span>
       </button>
     `,
   ).join('');
+}
+
+function colorMarkup() {
+  return `
+    <div class="ft-palette" role="group" aria-label="Annotation color">
+      ${COLORS.map(([color, label], index) => `
+        <button class="ft-color" type="button" data-color="${color}" aria-label="${label}" title="${label}" aria-pressed="${index === 0}" style="--ft-color:${color}"></button>
+      `).join('')}
+    </div>
+  `;
+}
+
+function isEditableKeyboardTarget(event) {
+  const path = event.composedPath?.() || [event.target];
+  return path.some((target) =>
+    target instanceof HTMLElement
+    && (target.matches('input, textarea') || target.isContentEditable));
 }
 
 export class FeedbackToolController {
@@ -152,7 +178,7 @@ export class FeedbackToolController {
           </div>
         </header>
         <div class="ft-workspace" data-edit-view>
-          <nav class="ft-toolrail" aria-label="Annotation tools">${toolMarkup()}</nav>
+          <nav class="ft-toolrail" aria-label="Annotation tools">${toolMarkup()}${colorMarkup()}</nav>
           <div class="ft-stage-shell">
             <div class="ft-stage"><canvas data-canvas></canvas></div>
           </div>
@@ -182,19 +208,29 @@ export class FeedbackToolController {
     this.root.querySelectorAll('[data-tool]').forEach((button) => {
       button.addEventListener('click', () => this.selectTool(button.dataset.tool));
     });
+    this.root.querySelectorAll('[data-color]').forEach((button) => {
+      button.addEventListener('click', () => this.selectColor(button.dataset.color));
+    });
     this.root.querySelector('[data-action="undo"]').addEventListener('click', () => this.editor.undo());
     this.root.querySelector('[data-action="redo"]').addEventListener('click', () => this.editor.redo());
     this.root.querySelector('[data-action="clear"]').addEventListener('click', () => this.editor.clear());
     this.root.querySelector('[data-action="close"]').addEventListener('click', () => this.close());
     this.root.querySelector('[data-action="next"]').addEventListener('click', () => this.showReview());
     document.addEventListener('keydown', this.keyHandler, true);
-    this.root.querySelector('[data-tool="select"]').focus();
+    this.root.querySelector('[data-tool="arrow"]').focus();
   }
 
   selectTool(tool) {
     this.editor.setTool(tool);
     this.root.querySelectorAll('[data-tool]').forEach((button) => {
       button.setAttribute('aria-pressed', String(button.dataset.tool === tool));
+    });
+  }
+
+  selectColor(color) {
+    this.editor.setColor(color);
+    this.root.querySelectorAll('[data-color]').forEach((button) => {
+      button.setAttribute('aria-pressed', String(button.dataset.color === color));
     });
   }
 
@@ -396,7 +432,7 @@ export class FeedbackToolController {
   }
 
   onKeyDown(event) {
-    const editable = ['INPUT', 'TEXTAREA'].includes(event.target.tagName);
+    const editable = isEditableKeyboardTarget(event);
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z' && !editable) {
       event.preventDefault();
       event.shiftKey ? this.editor?.redo() : this.editor?.undo();

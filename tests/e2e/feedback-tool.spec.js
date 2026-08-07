@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 
 test('captures, annotates, submits, and downloads a report', async ({ page }) => {
@@ -19,6 +20,10 @@ test('captures, annotates, submits, and downloads a report', async ({ page }) =>
     ];
   });
   expect(backgroundCoverage).toEqual([255, 255, 255, 255]);
+  await expect(page.getByRole('button', { name: 'Arrow' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Select an annotation to move, resize, or delete it' })).toHaveAttribute('aria-pressed', 'false');
+  await page.getByRole('button', { name: 'Blue' }).click();
+  await expect(page.getByRole('button', { name: 'Blue' })).toHaveAttribute('aria-pressed', 'true');
 
   const box = await canvas.boundingBox();
   expect(box).toBeTruthy();
@@ -52,7 +57,9 @@ test('captures, annotates, submits, and downloads a report', async ({ page }) =>
   await page.getByRole('button', { name: 'Comment' }).click();
   await page.mouse.click(x + 60, y + 170);
   const comment = page.getByRole('dialog', { name: 'Add comment' });
-  await comment.getByRole('textbox').fill('The spacing here feels inconsistent.');
+  await comment.getByRole('textbox').fill('The spacing here feels inconsistent.x');
+  await comment.getByRole('textbox').press('Backspace');
+  await expect(comment.getByRole('textbox')).toHaveValue('The spacing here feels inconsistent.');
   await comment.getByRole('button', { name: 'Add pin' }).click();
 
   await expect(page.locator('[data-feedback-tool-root] [data-status]')).toContainText('5 annotations');
@@ -86,7 +93,48 @@ test('captures, annotates, submits, and downloads a report', async ({ page }) =>
 
   const jsonDownload = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download JSON' }).click();
-  expect((await jsonDownload).suggestedFilename()).toMatch(/\.json$/);
+  const downloadedJson = await jsonDownload;
+  expect(downloadedJson.suggestedFilename()).toMatch(/\.json$/);
+  const jsonPath = await downloadedJson.path();
+  const report = JSON.parse(await readFile(jsonPath, 'utf8'));
+  expect(report.annotations.find(({ type }) => type === 'highlight').color).toBe('#2563eb');
+  expect(report.annotations.find(({ type }) => type === 'pen').color).toBe('#2563eb');
+});
+
+test('refreshes a moved hide box from its new screenshot location', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Give feedback' }).click();
+  await expect(page.getByRole('dialog', { name: 'Annotate screenshot' })).toBeVisible({ timeout: 15_000 });
+
+  const upperCanvas = page.locator('[data-feedback-tool-root] .upper-canvas');
+  const lowerCanvas = page.locator('[data-feedback-tool-root] .lower-canvas');
+  const box = await upperCanvas.boundingBox();
+  const dimensions = await upperCanvas.evaluate((element) => ({ width: element.width, height: element.height }));
+  const scaleX = box.width / dimensions.width;
+  const scaleY = box.height / dimensions.height;
+  const sceneToClient = ({ x, y }) => ({ x: box.x + x * scaleX, y: box.y + y * scaleY });
+  const source = { left: 1080, top: 5, width: 80, height: 24 };
+  const destination = { left: 80, top: 420 };
+  const sourceStart = sceneToClient({ x: source.left, y: source.top });
+  const sourceEnd = sceneToClient({ x: source.left + source.width, y: source.top + source.height });
+  const sourceCenter = sceneToClient({ x: source.left + source.width / 2, y: source.top + source.height / 2 });
+  const destinationCenter = sceneToClient({ x: destination.left + source.width / 2, y: destination.top + source.height / 2 });
+
+  await page.getByRole('button', { name: 'Hide' }).click();
+  await page.mouse.move(sourceStart.x, sourceStart.y);
+  await page.mouse.down();
+  await page.mouse.move(sourceEnd.x, sourceEnd.y, { steps: 5 });
+  await page.mouse.up();
+  await page.getByRole('button', { name: 'Select an annotation to move, resize, or delete it' }).click();
+  await page.mouse.move(sourceCenter.x, sourceCenter.y);
+  await page.mouse.down();
+  await page.mouse.move(destinationCenter.x, destinationCenter.y, { steps: 8 });
+  await page.mouse.up();
+
+  await expect.poll(() => lowerCanvas.evaluate((element, point) => {
+    const pixel = element.getContext('2d').getImageData(point.x, point.y, 1, 1).data;
+    return Array.from(pixel);
+  }, { x: destination.left + source.width / 2, y: destination.top + source.height / 2 })).toEqual([255, 255, 255, 255]);
 });
 
 test('validates the feedback form and can return to annotation', async ({ page }) => {

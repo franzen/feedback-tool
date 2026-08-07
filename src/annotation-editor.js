@@ -51,7 +51,8 @@ export class AnnotationEditor {
     this.onCommentRequest = onCommentRequest;
     this.onHistoryChange = onHistoryChange;
     this.onDirtyChange = onDirtyChange;
-    this.tool = 'select';
+    this.tool = 'arrow';
+    this.color = '#e23d54';
     this.drawing = null;
     this.restoring = false;
     this.commentSequence = 0;
@@ -70,7 +71,7 @@ export class AnnotationEditor {
     this.bindCanvasEvents();
     this.history = [this.snapshot()];
     this.historyIndex = 0;
-    this.setTool('select');
+    this.setTool('arrow');
 
     this.resizeObserver = new ResizeObserver(() => this.resizeToFit());
     this.resizeObserver.observe(stage.parentElement);
@@ -116,7 +117,10 @@ export class AnnotationEditor {
         path.setControlsVisibility({ mtr: false });
         this.commit();
       },
-      modified: () => this.commit(),
+      modified: ({ target }) => {
+        if (target?.annotationType === 'redact') this.refreshRedaction(target);
+        this.commit();
+      },
     };
 
     this.canvas.on('mouse:down', this.handlers.down);
@@ -141,12 +145,31 @@ export class AnnotationEditor {
 
     if (tool === 'pen') {
       const brush = new PencilBrush(this.canvas);
-      brush.color = '#e23d54';
+      brush.color = this.color;
       brush.width = Math.max(4, 4 * this.pixelScale);
       this.canvas.freeDrawingBrush = brush;
     }
 
     this.canvas.requestRenderAll();
+  }
+
+  setColor(color) {
+    this.color = color;
+    if (this.canvas.freeDrawingBrush) this.canvas.freeDrawingBrush.color = color;
+  }
+
+  setTopRightResizeControls(object) {
+    object.setControlsVisibility({
+      bl: true,
+      br: false,
+      mb: true,
+      ml: true,
+      mr: false,
+      mt: false,
+      mtr: false,
+      tl: false,
+      tr: false,
+    });
   }
 
   onPointerDown(event) {
@@ -171,7 +194,7 @@ export class AnnotationEditor {
   createPreview(tool, start) {
     if (tool === 'arrow') {
       return new Line([start.x, start.y, start.x, start.y], {
-        stroke: '#e23d54',
+        stroke: this.color,
         strokeWidth: Math.max(4, 4 * this.pixelScale),
         selectable: false,
         evented: false,
@@ -184,11 +207,10 @@ export class AnnotationEditor {
       top: start.y,
       width: 1,
       height: 1,
-      fill: tool === 'highlight' ? '#ffd84d' : 'rgba(30,41,59,.42)',
-      opacity: tool === 'highlight' ? 0.38 : 1,
-      stroke: tool === 'highlight' ? '#f5b900' : '#475467',
+      fill: tool === 'highlight' ? 'transparent' : 'rgba(30,41,59,.42)',
+      stroke: tool === 'highlight' ? this.color : '#475467',
       strokeDashArray: tool === 'redact' ? [8 * this.pixelScale, 6 * this.pixelScale] : undefined,
-      strokeWidth: Math.max(2, 2 * this.pixelScale),
+      strokeWidth: tool === 'highlight' ? Math.max(3, 3 * this.pixelScale) : Math.max(2, 2 * this.pixelScale),
       selectable: false,
       evented: false,
     });
@@ -231,7 +253,7 @@ export class AnnotationEditor {
     const object = new Rect({
       ...TOP_LEFT_ORIGIN,
       ...normalizedBounds(start, end),
-      annotationColor: '#ffd84d',
+      annotationColor: this.color,
       annotationId: id(),
       annotationType: 'highlight',
       borderColor: '#6558d3',
@@ -240,31 +262,23 @@ export class AnnotationEditor {
       cornerStrokeColor: '#6558d3',
       cornerStyle: 'circle',
       evented: false,
-      fill: '#ffd84d',
+      fill: 'transparent',
+      lockScalingFlip: true,
       lockRotation: true,
-      opacity: 0.38,
+      opacity: 1,
       selectable: false,
-      stroke: '#f5b900',
-      strokeWidth: Math.max(2, 2 * this.pixelScale),
+      stroke: this.color,
+      strokeUniform: true,
+      strokeWidth: Math.max(3, 3 * this.pixelScale),
       transparentCorners: false,
     });
-    object.setControlsVisibility({
-      bl: true,
-      br: false,
-      mb: true,
-      ml: true,
-      mr: false,
-      mt: false,
-      mtr: false,
-      tl: false,
-      tr: false,
-    });
+    this.setTopRightResizeControls(object);
     this.canvas.add(object);
     this.commit();
   }
 
   addArrow(start, end) {
-    const color = '#e23d54';
+    const color = this.color;
     const strokeWidth = Math.max(4, 4 * this.pixelScale);
     const angle = (Math.atan2(end.y - start.y, end.x - start.x) * 180) / Math.PI + 90;
     const line = new Line([start.x, start.y, end.x, end.y], {
@@ -297,7 +311,7 @@ export class AnnotationEditor {
     const radius = 14 * this.pixelScale;
     const circle = new Circle({
       radius,
-      fill: '#6558d3',
+      fill: this.color,
       stroke: '#ffffff',
       strokeWidth: Math.max(2, 2 * this.pixelScale),
       originX: 'center',
@@ -329,6 +343,34 @@ export class AnnotationEditor {
 
   addRedaction(start, end) {
     const bounds = normalizedBounds(start, end);
+    const patch = this.createRedactionPatch(bounds);
+
+    const object = new FabricImage(patch, {
+      ...TOP_LEFT_ORIGIN,
+      left: bounds.left,
+      top: bounds.top,
+      annotationId: id(),
+      annotationType: 'redact',
+      borderColor: '#6558d3',
+      cornerColor: '#ffffff',
+      cornerSize: Math.max(10, 10 * this.pixelScale),
+      cornerStrokeColor: '#6558d3',
+      cornerStyle: 'circle',
+      evented: false,
+      lockRotation: true,
+      lockScalingFlip: true,
+      selectable: false,
+      stroke: '#344054',
+      strokeUniform: true,
+      strokeWidth: Math.max(1, this.pixelScale),
+      transparentCorners: false,
+    });
+    this.setTopRightResizeControls(object);
+    this.canvas.add(object);
+    this.commit();
+  }
+
+  createRedactionPatch(bounds) {
     const blockSize = Math.max(8, Math.round(10 * this.pixelScale));
     const small = document.createElement('canvas');
     small.width = Math.max(1, Math.ceil(bounds.width / blockSize));
@@ -351,42 +393,34 @@ export class AnnotationEditor {
     const context = patch.getContext('2d');
     context.imageSmoothingEnabled = false;
     context.drawImage(small, 0, 0, patch.width, patch.height);
+    return patch;
+  }
 
-    const object = new FabricImage(patch, {
+  refreshRedaction(object) {
+    const bounds = {
+      left: Math.max(0, Math.min(this.capture.width - 1, object.left)),
+      top: Math.max(0, Math.min(this.capture.height - 1, object.top)),
+      width: Math.max(1, Math.min(object.width * Math.abs(object.scaleX), this.capture.width - object.left)),
+      height: Math.max(1, Math.min(object.height * Math.abs(object.scaleY), this.capture.height - object.top)),
+    };
+    const patch = this.createRedactionPatch(bounds);
+    object.setElement(patch, { width: bounds.width, height: bounds.height });
+    object.set({
       ...TOP_LEFT_ORIGIN,
+      dirty: true,
+      flipX: false,
+      flipY: false,
       left: bounds.left,
       top: bounds.top,
-      annotationId: id(),
-      annotationType: 'redact',
-      borderColor: '#6558d3',
-      cornerColor: '#ffffff',
-      cornerSize: Math.max(10, 10 * this.pixelScale),
-      cornerStrokeColor: '#6558d3',
-      cornerStyle: 'circle',
-      evented: false,
-      lockRotation: true,
-      selectable: false,
-      stroke: '#344054',
-      strokeWidth: Math.max(1, this.pixelScale),
-      transparentCorners: false,
+      scaleX: 1,
+      scaleY: 1,
     });
-    object.setControlsVisibility({
-      bl: true,
-      br: false,
-      mb: true,
-      ml: true,
-      mr: false,
-      mt: false,
-      mtr: false,
-      tl: false,
-      tr: false,
-    });
-    this.canvas.add(object);
-    this.commit();
+    object.setCoords();
+    this.canvas.requestRenderAll();
   }
 
   snapshot() {
-    return JSON.stringify(this.canvas.toJSON(HISTORY_PROPERTIES));
+    return JSON.stringify(this.canvas.toObject(HISTORY_PROPERTIES));
   }
 
   commit() {
@@ -403,6 +437,11 @@ export class AnnotationEditor {
     this.canvas.discardActiveObject();
     await this.canvas.loadFromJSON(this.history[index]);
     this.addBackground();
+    this.canvas.getObjects().forEach((object) => {
+      if (object.annotationType === 'highlight' || object.annotationType === 'redact') {
+        this.setTopRightResizeControls(object);
+      }
+    });
     this.historyIndex = index;
     this.commentSequence = Math.max(
       0,
