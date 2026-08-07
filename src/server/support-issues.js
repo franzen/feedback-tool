@@ -37,7 +37,8 @@ function titleFromMessage(message) {
 
 function escapeTableValue(value) {
   return String(value ?? '')
-    .replace(/\r?\n/g, ' ')
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/\\/g, '\\\\')
     .replace(/\|/g, '\\|')
     .trim();
 }

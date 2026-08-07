@@ -80,6 +80,14 @@ describe('feedbackReportToIssue', () => {
     expect(withReporter.body).toContain('| Reporter | reporter@example.com |');
     expect(withoutMetadata.body).not.toContain('## Context');
   });
+
+  it('escapes existing backslashes before Markdown table separators', () => {
+    const issue = feedbackReportToIssue(feedbackReport(), {
+      context: { Custom: String.raw`path\|segment` },
+    });
+
+    expect(issue.body).toContain(String.raw`| Custom | path\\\|segment |`);
+  });
 });
 
 describe('createSupportIssueClient', () => {
