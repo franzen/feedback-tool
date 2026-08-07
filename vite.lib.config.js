@@ -7,11 +7,12 @@ export default defineConfig({
     lib: {
       entry: resolve(import.meta.dirname, 'src/index.js'),
       name: 'FeedbackTool',
-      formats: ['es', 'iife'],
-      fileName: (format) => `feedback-tool.${format}.js`,
+      formats: ['es'],
+      fileName: () => 'index.js',
     },
     license: true,
-    rolldownOptions: {
+    rollupOptions: {
+      external: ['fabric', 'html2canvas'],
       output: {
         exports: 'named',
       },

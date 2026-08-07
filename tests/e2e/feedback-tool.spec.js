@@ -10,7 +10,8 @@ test('captures, annotates, submits, and downloads a report', async ({ page }) =>
   await expect(page.getByRole('dialog', { name: 'Annotate screenshot' })).toBeVisible({ timeout: 15_000 });
 
   const canvas = page.locator('[data-feedback-tool-root] .upper-canvas');
-  const backgroundCoverage = await page.locator('[data-feedback-tool-root] .lower-canvas').evaluate((element) => {
+  const lowerCanvas = page.locator('[data-feedback-tool-root] .lower-canvas');
+  await expect.poll(() => lowerCanvas.evaluate((element) => {
     const context = element.getContext('2d');
     return [
       context.getImageData(1, 1, 1, 1).data[3],
@@ -18,8 +19,7 @@ test('captures, annotates, submits, and downloads a report', async ({ page }) =>
       context.getImageData(1, element.height - 2, 1, 1).data[3],
       context.getImageData(element.width - 2, element.height - 2, 1, 1).data[3],
     ];
-  });
-  expect(backgroundCoverage).toEqual([255, 255, 255, 255]);
+  })).toEqual([255, 255, 255, 255]);
   await expect(page.getByRole('button', { name: 'Arrow' })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Select an annotation to move, resize, or delete it' })).toHaveAttribute('aria-pressed', 'false');
   await page.getByRole('button', { name: 'Blue' }).click();
