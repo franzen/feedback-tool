@@ -1,6 +1,6 @@
 {
   "name": "@franzen/feedback-tool",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Framework-free in-browser screenshot annotation and feedback widget",
   "type": "module",
   "license": "MIT",
