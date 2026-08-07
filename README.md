@@ -2,6 +2,42 @@
 
 A framework-free, embeddable JavaScript widget for capturing the visible webpage, annotating it, and collecting a compact feedback report. The repository also includes a realistic local demo.
 
+## Install from GitHub Packages
+
+The package is published as `@franzen/feedback-tool`. GitHub Packages requires authentication, including for public npm packages.
+
+Add the registry mapping to the consuming project's `.npmrc`:
+
+```ini
+@franzen:registry=https://npm.pkg.github.com
+```
+
+For local development, authenticate with a classic GitHub personal access token that has `read:packages` permission. Do not commit the token:
+
+```bash
+npm login --scope=@franzen --auth-type=legacy --registry=https://npm.pkg.github.com
+npm install @franzen/feedback-tool
+```
+
+For installation in GitHub Actions, grant the consuming repository read access in the package settings and use its `GITHUB_TOKEN`:
+
+```yaml
+permissions:
+  contents: read
+  packages: read
+
+steps:
+  - uses: actions/checkout@v6
+  - uses: actions/setup-node@v4
+    with:
+      node-version: 24
+      registry-url: https://npm.pkg.github.com
+      scope: '@franzen'
+  - run: npm ci
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
 ## Run the demo
 
 ```bash
@@ -15,12 +51,12 @@ Open the local URL printed by Vite and select **Give feedback**. Production bund
 npm run build
 ```
 
-The library output is written to `dist/`, and the static demo is written to `demo-dist/`.
+The ESM library output is written to `dist/`, and the static demo is written to `demo-dist/`.
 
 ## Module usage
 
 ```js
-import { createFeedbackTool, reportToJson } from './dist/feedback-tool.es.js';
+import { createFeedbackTool, reportToJson } from '@franzen/feedback-tool';
 
 const feedback = createFeedbackTool({
   accentColor: '#6558d3',
@@ -46,20 +82,9 @@ feedback.close();
 feedback.destroy();
 ```
 
-## Plain script usage
-
-```html
-<script src="./dist/feedback-tool.iife.js"></script>
-<script>
-  const feedback = FeedbackTool.createFeedbackTool({
-    onSubmit: async (report) => {
-      console.log(report);
-    },
-  });
-</script>
-```
-
 Set `launcher: false` when the host page supplies its own button. The controller returned by `createFeedbackTool()` exposes `open()`, `close()`, and `destroy()`.
+
+The package is browser-only and ESM-only. `fabric` and `html2canvas` remain normal package dependencies so host bundlers can deduplicate and optimize them. TypeScript declarations are included.
 
 ## Report payload
 
@@ -85,6 +110,25 @@ Because `html2canvas` reconstructs a page from its DOM rather than taking a nati
 npm test
 npm run test:e2e
 npm run build
+npm run test:package
 ```
 
 The browser tests cover viewport capture, all five annotation tools, history, validation, submission, and PNG/JSON downloads.
+
+## Versioning and releases
+
+Release-impacting pull requests include a Changeset:
+
+```bash
+npm run changeset
+```
+
+While the package is below 1.0, use a patch for compatible fixes and a minor for features or breaking API changes. Clearly call out breaking behavior in the Changeset summary. Documentation, tests, and CI-only work do not require a Changeset.
+
+After changes land on `main`, the release workflow opens or updates a release pull request containing the next version and changelog. Approving and merging that pull request publishes the package to GitHub Packages, creates a Git tag, and creates a GitHub Release. Publishing uses the repository's short-lived `GITHUB_TOKEN`; no package publishing token is stored.
+
+One-time repository setup remains intentionally outside the workflow:
+
+- After the CI workflow has run on GitHub, protect `main` by requiring pull requests, one approval, and the `Verify package` status check.
+- After the first publication, change the package visibility to **Public** in its package settings. GitHub does not allow a public package to be changed back to private.
+- Grant each consuming repository package read access before using its `GITHUB_TOKEN` to install the package.
