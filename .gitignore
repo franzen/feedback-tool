@@ -1,0 +1,8 @@
+node_modules/
+dist/
+demo-dist/
+playwright-report/
+test-results/
+.playwright-mcp/
+/*.png
+.DS_Store

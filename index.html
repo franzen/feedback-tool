@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Local demo for the Feedback Tool screen annotation widget">
+    <title>Pulseboard — Feedback Tool Demo</title>
+    <link rel="stylesheet" href="/demo/styles.css">
+  </head>
+  <body>
+    <div class="demo-banner">
+      <span class="demo-banner-dot"></span>
+      Local widget demo
+      <span>Use “Give feedback” to annotate this page</span>
+    </div>
+
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="logo" href="#" aria-label="Pulseboard home">
+          <span class="logo-mark">P</span>
+          <span>Pulseboard</span>
+        </a>
+        <nav class="nav" aria-label="Primary navigation">
+          <a class="nav-link active" href="#"><span>⌂</span> Overview</a>
+          <a class="nav-link" href="#"><span>◎</span> Analytics</a>
+          <a class="nav-link" href="#"><span>◇</span> Customers</a>
+          <a class="nav-link" href="#"><span>▤</span> Reports</a>
+          <a class="nav-link" href="#"><span>⚙</span> Settings</a>
+        </nav>
+        <div class="sidebar-card">
+          <span class="sidebar-card-label">Monthly goal</span>
+          <strong>78% complete</strong>
+          <div class="progress"><span></span></div>
+          <small>4,820 of 6,200 responses</small>
+        </div>
+        <div class="profile">
+          <span class="avatar">NF</span>
+          <span><strong>Nils Franzen</strong><small>Product team</small></span>
+          <button type="button" aria-label="Open profile menu">•••</button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Friday, August 7</p>
+            <h1>Good morning, Nils</h1>
+          </div>
+          <div class="topbar-actions">
+            <button class="icon-button" type="button" aria-label="Search">⌕</button>
+            <button class="icon-button notification-button" type="button" aria-label="Notifications">♢<span></span></button>
+            <button class="primary-button" type="button">＋ New report</button>
+          </div>
+        </header>
+
+        <section class="metrics" aria-label="Performance summary">
+          <article class="metric-card">
+            <div class="metric-heading"><span>Active customers</span><span class="metric-icon purple">↗</span></div>
+            <strong>12,849</strong>
+            <p><span class="up">↑ 12.5%</span> from last month</p>
+          </article>
+          <article class="metric-card">
+            <div class="metric-heading"><span>Response rate</span><span class="metric-icon green">◎</span></div>
+            <strong>68.2%</strong>
+            <p><span class="up">↑ 5.4%</span> from last month</p>
+          </article>
+          <article class="metric-card">
+            <div class="metric-heading"><span>Avg. satisfaction</span><span class="metric-icon amber">☆</span></div>
+            <strong>4.7</strong>
+            <p><span class="down">↓ 0.3%</span> from last month</p>
+          </article>
+          <article class="metric-card">
+            <div class="metric-heading"><span>Open insights</span><span class="metric-icon blue">◇</span></div>
+            <strong>284</strong>
+            <p><span class="up">↑ 18.2%</span> from last month</p>
+          </article>
+        </section>
+
+        <section class="content-grid">
+          <article class="panel chart-panel">
+            <div class="panel-heading">
+              <div><h2>Customer sentiment</h2><p>Positive responses over the past 7 months</p></div>
+              <button class="select-button" type="button">Last 7 months⌄</button>
+            </div>
+            <div class="chart-summary"><strong>8,924</strong><span>Positive responses</span><em>+8.2%</em></div>
+            <div class="chart" aria-label="Line chart showing rising customer sentiment">
+              <span class="y y1">100%</span><span class="y y2">75%</span><span class="y y3">50%</span><span class="y y4">25%</span>
+              <div class="grid-line g1"></div><div class="grid-line g2"></div><div class="grid-line g3"></div><div class="grid-line g4"></div>
+              <svg viewBox="0 0 700 220" role="img" aria-hidden="true" preserveAspectRatio="none">
+                <defs><linearGradient id="area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6c5ce7" stop-opacity=".25"/><stop offset="1" stop-color="#6c5ce7" stop-opacity="0"/></linearGradient></defs>
+                <path class="chart-area" d="M0,172 C65,160 80,180 142,145 C206,109 234,151 296,115 C355,82 386,104 441,72 C500,39 553,70 606,38 C646,15 671,29 700,18 L700,220 L0,220 Z"/>
+                <path class="chart-line" d="M0,172 C65,160 80,180 142,145 C206,109 234,151 296,115 C355,82 386,104 441,72 C500,39 553,70 606,38 C646,15 671,29 700,18"/>
+                <g class="points"><circle cx="0" cy="172" r="5"/><circle cx="142" cy="145" r="5"/><circle cx="296" cy="115" r="5"/><circle cx="441" cy="72" r="5"/><circle cx="606" cy="38" r="5"/><circle cx="700" cy="18" r="5"/></g>
+              </svg>
+              <div class="x-labels"><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span></div>
+            </div>
+          </article>
+
+          <article class="panel activity-panel">
+            <div class="panel-heading"><div><h2>Recent activity</h2><p>Latest customer signals</p></div><button class="link-button" type="button">View all</button></div>
+            <ul class="activity-list">
+              <li><span class="activity-icon green">✓</span><span><strong>Survey completed</strong><small>Acme Inc. · 3 minutes ago</small></span><em>4.8</em></li>
+              <li><span class="activity-icon purple">✦</span><span><strong>New insight detected</strong><small>Checkout flow · 18 minutes ago</small></span></li>
+              <li><span class="activity-icon amber">!</span><span><strong>Score needs attention</strong><small>Mobile experience · 1 hour ago</small></span><em class="negative">2.1</em></li>
+              <li><span class="activity-icon blue">＋</span><span><strong>Contact added</strong><small>Northstar Labs · 2 hours ago</small></span></li>
+            </ul>
+          </article>
+        </section>
+
+        <section class="panel table-panel">
+          <div class="panel-heading"><div><h2>Top performing surveys</h2><p>Response and completion metrics</p></div><button class="select-button" type="button">All campaigns⌄</button></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Survey</th><th>Status</th><th>Responses</th><th>Completion</th><th>Score</th><th></th></tr></thead>
+              <tbody>
+                <tr><td><span class="survey-icon purple">O</span><span><strong>Onboarding experience</strong><small>Updated today</small></span></td><td><span class="status live">Live</span></td><td>2,418</td><td><div class="mini-progress"><span style="width:84%"></span></div>84%</td><td><strong>4.8</strong></td><td>•••</td></tr>
+                <tr><td><span class="survey-icon green">N</span><span><strong>Quarterly NPS</strong><small>Updated yesterday</small></span></td><td><span class="status live">Live</span></td><td>1,892</td><td><div class="mini-progress"><span style="width:72%"></span></div>72%</td><td><strong>4.6</strong></td><td>•••</td></tr>
+                <tr><td><span class="survey-icon amber">C</span><span><strong>Checkout feedback</strong><small>Updated Aug 4</small></span></td><td><span class="status draft">Draft</span></td><td>943</td><td><div class="mini-progress"><span style="width:61%"></span></div>61%</td><td><strong>4.2</strong></td><td>•••</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="demo-output" aria-live="polite">
+          <div>
+            <span class="demo-output-label">Latest demo submission</span>
+            <strong data-report-title>No report submitted yet</strong>
+            <p data-report-summary>Complete the feedback flow to inspect and download the generated files.</p>
+          </div>
+          <div class="demo-output-actions">
+            <button type="button" data-download="png" disabled>Download PNG</button>
+            <button type="button" data-download="json" disabled>Download JSON</button>
+          </div>
+          <img data-report-preview alt="Latest annotated screenshot" hidden>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/demo/main.js"></script>
+  </body>
+</html>
