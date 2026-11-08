@@ -147,7 +147,7 @@ const comments = await supportIssues.listComments(issue.id);
 await supportIssues.addComment(issue.id, 'Thanks — we can reproduce this.');
 ```
 
-`forwardFeedback()` produces a Markdown issue body containing the message, screenshot link, and technical report metadata. Reporter email is excluded by default; opt in with `includeReporterEmail: true` only when your privacy policy allows it. Use `createIssue()` directly when an application needs complete control over title and body formatting.
+`forwardFeedback()` produces a Markdown issue body containing the message, screenshot link, comment annotation text (numbered to match the pins on the screenshot), and technical report metadata. Reporter email is excluded by default; opt in with `includeReporterEmail: true` only when your privacy policy allows it. Use `createIssue()` directly when an application needs complete control over title and body formatting.
 
 The screenshot is not uploaded to GitHub by this package because the GitHub Issues API has no issue-attachment upload endpoint. Protect the screenshot URL according to the application's data policy, and remember that GitHub must be able to fetch it if it is embedded in the issue.
 

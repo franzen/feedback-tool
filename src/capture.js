@@ -1,4 +1,5 @@
 import html2canvas from 'html2canvas-pro';
+import { canvasToPngBlob } from './canvas-blob.js';
 
 const RESOURCE_WAIT_MS = 2500;
 
@@ -55,7 +56,7 @@ export async function validateCapture(canvas, expected = expectedCaptureDimensio
     throw new Error('The page contains cross-origin content that prevents screenshot export.');
   }
 
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+  const blob = await canvasToPngBlob(canvas);
   if (!blob) throw new Error('The browser could not export the page capture.');
 
   return canvas;

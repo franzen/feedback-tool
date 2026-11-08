@@ -9,6 +9,7 @@ import {
   Rect,
   Triangle,
 } from 'fabric';
+import { canvasToPngBlob } from './canvas-blob.js';
 import { serializeAnnotation } from './report.js';
 
 const HISTORY_PROPERTIES = [
@@ -38,10 +39,10 @@ function normalizedBounds(start, end) {
   };
 }
 
-function canvasToBlob(canvas) {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Could not export the annotation.'))), 'image/png');
-  });
+async function canvasToBlob(canvas) {
+  const blob = await canvasToPngBlob(canvas);
+  if (!blob) throw new Error('Could not export the annotation.');
+  return blob;
 }
 
 export class AnnotationEditor {
