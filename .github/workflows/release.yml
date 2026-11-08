@@ -45,10 +45,9 @@ jobs:
       - name: Create release pull request or publish
         uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
-          publish: npm run release
-          version: npm run version-packages
-          title: 'chore: release package'
-          commit: 'chore: release package'
+          publish-script: npm run release
+          version-script: npm run version-packages
+          pr-title: 'chore: release package'
+          commit-message: 'chore: release package'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
