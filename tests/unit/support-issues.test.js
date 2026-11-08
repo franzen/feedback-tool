@@ -88,6 +88,124 @@ describe('feedbackReportToIssue', () => {
 
     expect(issue.body).toContain(String.raw`| Custom | path\\\|segment |`);
   });
+
+  it('keeps plain feedback text and line breaks unchanged', () => {
+    const issue = feedbackReportToIssue(feedbackReport());
+
+    expect(issue.body).toContain('## Feedback\n\nThe export button is clipped.\nIt happens on a narrow screen.\n');
+  });
+
+  it('neutralizes mentions, issue references and Markdown in the feedback message', () => {
+    const report = feedbackReport();
+    report.feedback.message = [
+      'Hi @octocat, same as #12 and acme/app#7 (GH-9)',
+      '',
+      '',
+      '',
+      '# Injected heading',
+      '- list item',
+      '> quote',
+      '1. ordered',
+      '    indented code',
+      '---',
+      '**bold** [link](https://evil.example) <img src=x> `code` a|b',
+    ].join('\n');
+
+    const { body } = feedbackReportToIssue(report);
+    const feedback = body.slice(body.indexOf('## Feedback'), body.indexOf('## Context'));
+    const ZWSP = '​';
+
+    expect(feedback).toBe([
+      '## Feedback',
+      '',
+      `Hi @${ZWSP}octocat, same as #${ZWSP}12 and acme/app#${ZWSP}7 (GH-${ZWSP}9)`,
+      '',
+      String.raw`\# Injected heading`,
+      String.raw`\- list item`,
+      String.raw`\> quote`,
+      String.raw`1\. ordered`,
+      'indented code',
+      String.raw`\---`,
+      String.raw`\*\*bold\*\* \[link\](https://evil.example) \<img src=x\> \`code\` a\|b`,
+      '',
+      '',
+    ].join('\n'));
+  });
+
+  it('uses a placeholder for a blank feedback message', () => {
+    const report = feedbackReport();
+    report.feedback.message = ' \n\t ';
+
+    expect(feedbackReportToIssue(report).body).toContain('## Feedback\n\n_No message provided._');
+  });
+
+  describe('annotations', () => {
+    const bounds = { x: 0, y: 0, width: 24, height: 24 };
+    const comment = (number, text) => ({
+      id: `comment-${number}`,
+      type: 'comment',
+      number,
+      comment: text,
+      point: { x: 10, y: 10 },
+      bounds,
+    });
+    const ZWSP = '​';
+
+    it('omits the section when there are no comment annotations', () => {
+      const report = feedbackReport();
+      expect(feedbackReportToIssue(report).body).not.toContain('## Annotations');
+
+      report.annotations = [
+        { id: 'arrow-1', type: 'arrow', bounds, geometry: { bounds } },
+        { id: 'redact-1', type: 'redact', bounds },
+      ];
+      expect(feedbackReportToIssue(report).body).not.toContain('## Annotations');
+
+      delete report.annotations;
+      expect(feedbackReportToIssue(report).body).not.toContain('## Annotations');
+    });
+
+    it('lists comments in pin order after the screenshot, keeping pin numbers', () => {
+      const report = feedbackReport();
+      report.annotations = [
+        comment(3, 'Should be "Publish", not "Save"'),
+        { id: 'arrow-1', type: 'arrow', bounds, geometry: { bounds } },
+        comment(1, 'Button label is cut off here'),
+      ];
+
+      const { body } = feedbackReportToIssue(report, { screenshotUrl: 'https://example.com/s.png' });
+
+      expect(body).toContain([
+        '## Annotations',
+        '',
+        '- **1.** Button label is cut off here',
+        '- **3.** Should be "Publish", not "Save"',
+      ].join('\n'));
+      expect(body.indexOf('## Screenshot')).toBeLessThan(body.indexOf('## Annotations'));
+      expect(body.indexOf('## Annotations')).toBeLessThan(body.indexOf('## Context'));
+    });
+
+    it('neutralizes mentions, issue references, newlines and Markdown in comment text', () => {
+      const report = feedbackReport();
+      report.annotations = [
+        comment(1, '@octocat see #123, acme/app#7 and GH-9'),
+        comment(2, 'line one\n\n## Injected heading\r\n- item'),
+        comment(3, '**bold** [link](https://evil.example) <img src=x> `code` a|b \\'),
+        comment(4, '   '),
+      ];
+
+      const { body } = feedbackReportToIssue(report);
+
+      expect(body).toContain(`- **1.** @${ZWSP}octocat see #${ZWSP}123, acme/app#${ZWSP}7 and GH-${ZWSP}9`);
+      expect(body).not.toMatch(/@octocat|#123|#7|GH-9/);
+      expect(body).toContain('- **2.** line one ## Injected heading - item');
+      expect(body).not.toMatch(/^## Injected heading/m);
+      expect(body).toContain(
+        String.raw`- **3.** \*\*bold\*\* \[link\](https://evil.example) \<img src=x\> \`code\` a\|b \\`,
+      );
+      expect(body).toContain('- **4.** _No comment provided._');
+    });
+  });
 });
 
 describe('createSupportIssueClient', () => {

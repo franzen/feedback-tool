@@ -43,6 +43,62 @@ function escapeTableValue(value) {
     .trim();
 }
 
+const ZERO_WIDTH_SPACE = '​';
+
+// Control characters other than tab/newline/carriage return have no business in an issue body.
+const CONTROL_CHARACTERS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+
+/** Escape characters that start inline Markdown formatting, HTML, or table cells. */
+function escapeInlineMarkdown(text) {
+  return text.replace(/[\\`*_~[\]<>&|]/g, '\\$&');
+}
+
+/** Break @mentions and issue references so GitHub neither notifies users nor cross-links issues. */
+function neutralizeReferences(text) {
+  return text
+    .replace(/@(?=[\w-])/g, `@${ZERO_WIDTH_SPACE}`)
+    .replace(/#(?=\d)/g, `#${ZERO_WIDTH_SPACE}`)
+    .replace(/\b(GH)-(?=\d)/gi, `$1-${ZERO_WIDTH_SPACE}`);
+}
+
+/**
+ * Make user-supplied text safe to embed inline in a GitHub Markdown list item:
+ * one line, no inline formatting/HTML, and no mentions or issue references.
+ */
+function sanitizeInlineMarkdown(value) {
+  const text = String(value ?? '').replace(CONTROL_CHARACTERS, '').replace(/\s+/g, ' ').trim();
+  return neutralizeReferences(escapeInlineMarkdown(text));
+}
+
+/**
+ * Make multi-line user-supplied text safe to embed as plain paragraphs in a GitHub
+ * Markdown body. Line breaks are kept (GitHub renders them in issue bodies), but no
+ * line can start a heading, list, quote, code block, rule or table, and inline
+ * formatting, HTML, mentions and issue references are neutralized.
+ */
+function sanitizeMarkdownBlock(value) {
+  const lines = String(value ?? '')
+    .replace(CONTROL_CHARACTERS, '')
+    .split(/\r\n|\r|\n/)
+    // Leading whitespace would turn a line into an indented code block; trailing
+    // double spaces are hard breaks. Neither carries meaning in plain feedback text.
+    .map((line) => line.trim())
+    .map((line) => escapeInlineMarkdown(line)
+      // Block-level markers only matter at the start of a line. `*` is already escaped.
+      .replace(/^([#>+=-])/, '\\$1')
+      .replace(/^(\d+)([.)])/, '$1\\$2'))
+    .map(neutralizeReferences);
+
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function commentAnnotations(report) {
+  if (!Array.isArray(report.annotations)) return [];
+  return report.annotations
+    .filter((annotation) => annotation?.type === 'comment' && Number.isFinite(annotation.number))
+    .sort((a, b) => a.number - b.number);
+}
+
 function renderContextRows(report, context, includeReporterEmail) {
   const metadata = report.metadata ?? {};
   const viewport = metadata.viewport;
@@ -79,10 +135,21 @@ export function feedbackReportToIssue(report, options = {}) {
   }
 
   const title = cleanTitle(options.title) || titleFromMessage(report.feedback.message);
-  const sections = ['## Feedback', '', report.feedback.message.trim() || '_No message provided._'];
+  const sections = ['## Feedback', '', sanitizeMarkdownBlock(report.feedback.message) || '_No message provided._'];
 
   if (options.screenshotUrl) {
     sections.push('', '## Screenshot', '', `![Annotated screenshot](${options.screenshotUrl})`);
+  }
+
+  const comments = commentAnnotations(report);
+  if (comments.length) {
+    // Pin numbers come from a monotonic counter, so deleting a pin leaves gaps (1, 3, ...).
+    // A Markdown ordered list would renumber those, so the pin number is rendered explicitly.
+    sections.push('', '## Annotations', '');
+    for (const annotation of comments) {
+      const text = sanitizeInlineMarkdown(annotation.comment) || '_No comment provided._';
+      sections.push(`- **${annotation.number}.** ${text}`);
+    }
   }
 
   if (options.includeTechnicalMetadata !== false) {
