@@ -1,5 +1,15 @@
 # @franzen/feedback-tool
 
+## 0.3.1
+
+### Patch Changes
+
+- [#26](https://github.com/franzen/feedback-tool/pull/26) [`ca5f11e`](https://github.com/franzen/feedback-tool/commit/ca5f11e74ac03deb75d07ad354bec536809102b3) Thanks [@franzen](https://github.com/franzen)! - Fix the widget occasionally hanging on "Preparing…" for about 7 seconds after clicking Next (and a similar delay when opening the editor) on busy pages in Chromium-based browsers. Screenshots are now encoded synchronously instead of with `canvas.toBlob()`, which Chromium defers to idle time.
+
+- [#26](https://github.com/franzen/feedback-tool/pull/26) [`ca5f11e`](https://github.com/franzen/feedback-tool/commit/ca5f11e74ac03deb75d07ad354bec536809102b3) Thanks [@franzen](https://github.com/franzen)! - Include comment annotation text in issues created by the default `feedbackReportToIssue` formatter. Comments are listed under a new `## Annotations` section in pin order.
+  
+  The feedback message and comment text are now sanitized before they are embedded in the issue body: @mentions and issue references (`[#123](https://github.com/franzen/feedback-tool/issues/123)`, `owner/repo#123`, `GH-123`) no longer notify users or cross-link issues, and Markdown/HTML in the reporter's text renders as plain text. Line breaks in the message are preserved.
+
 ## 0.3.0
 
 ### Minor Changes
