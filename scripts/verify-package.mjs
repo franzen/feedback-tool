@@ -36,4 +36,19 @@ assert.equal(pack.name, '@franzen/feedback-tool');
 assert.equal(pack.version, manifest.version);
 assert.match(pack.version, /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?$/);
 
+// Every runtime dependency must be imported by the browser bundle rather than inlined into it;
+// otherwise consumers install a package the bundle never loads. The server bundle must stay
+// free of them so Node-only consumers never pull browser code.
+const importSpecifiers = (source) =>
+  new Set([...source.matchAll(/(?:\bfrom|\bimport)\s*\(?\s*["']([^"']+)["']/g)].map(([, specifier]) => specifier));
+const browserImports = importSpecifiers(await readFile(new URL('../dist/index.js', import.meta.url), 'utf8'));
+const serverImports = importSpecifiers(await readFile(new URL('../dist/server.js', import.meta.url), 'utf8'));
+
+for (const dependency of Object.keys(manifest.dependencies)) {
+  assert(browserImports.has(dependency), `dist/index.js inlines ${dependency} instead of importing it`);
+}
+for (const specifier of serverImports) {
+  assert(specifier.startsWith('node:'), `dist/server.js unexpectedly imports ${specifier}`);
+}
+
 console.log(`Verified ${pack.entryCount} packed files (${pack.size} bytes).`);

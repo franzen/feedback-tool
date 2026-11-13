@@ -1,5 +1,12 @@
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
+import manifest from './package.json' with { type: 'json' };
+
+// Runtime dependencies stay external so host bundlers can deduplicate them.
+// Derived from package.json so the list cannot drift from what consumers install.
+const runtimeDependencies = Object.keys(manifest.dependencies);
+const isExternal = (id) =>
+  id.startsWith('node:') || runtimeDependencies.some((name) => id === name || id.startsWith(`${name}/`));
 
 export default defineConfig({
   build: {
@@ -15,7 +22,7 @@ export default defineConfig({
     },
     license: true,
     rollupOptions: {
-      external: ['fabric', 'html2canvas', /^node:/],
+      external: isExternal,
       output: {
         exports: 'named',
       },
