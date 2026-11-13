@@ -1,5 +1,11 @@
 # @franzen/feedback-tool
 
+## 0.3.2
+
+### Patch Changes
+
+- [#31](https://github.com/franzen/feedback-tool/pull/31) [`d8f6329`](https://github.com/franzen/feedback-tool/commit/d8f6329d2e6fda887a1d331140f55ef2d2096a14) Thanks [@franzen](https://github.com/franzen)! - Stop inlining `html2canvas-pro` into the browser bundle. It is now imported from the installed dependency, as documented, so host bundlers can deduplicate it and the package no longer ships a second, frozen copy.
+
 ## 0.3.1
 
 ### Patch Changes
